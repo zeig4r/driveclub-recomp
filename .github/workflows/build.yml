@@ -27,7 +27,11 @@ jobs:
             mingw-w64-clang-x86_64-binutils
       - name: Package
         shell: msys2 {0}
-        run: bash packaging/package.sh 0.3.0-dev
+        run: |
+          pwd
+          ls -la
+          ls -la packaging || true
+          bash -x packaging/package.sh 0.3.0-dev
       - uses: actions/upload-artifact@v4
         with:
           name: driveclub-recomp-win64
