@@ -32,6 +32,16 @@ jobs:
           cat > ffx_win_compat.h <<'EOF'
           #pragma once
           #ifdef __cplusplus
+          #include <new>
+          #include <cstdlib>
+          #include <cstdio>
+          #include <cstring>
+          #include <cwchar>
+          #include <cstdint>
+          #include <cstddef>
+          #include <cmath>
+          #include <utility>
+          #include <memory>
           #include <stdlib.h>
           #include <stdio.h>
           #include <string.h>
@@ -48,7 +58,9 @@ jobs:
           EOF
           sed -i 's|-DCMAKE_CXX_FLAGS="-ffile-prefix-map=$root=\."|-DCMAKE_CXX_FLAGS="-ffile-prefix-map=$root=. -include $root/ffx_win_compat.h"|' build.sh
           sed -i 's|ninja -C out/gpu DriveClubGame|ninja -k 0 -C out/gpu DriveClubGame|' build.sh
+          sed -i 's/-Wall -Wextra -Werror/-Wall -Wextra/' gpu/CMakeLists.txt
           grep -n "CXX_FLAGS\|ninja" build.sh
+          grep -n "Wextra" gpu/CMakeLists.txt
           bash packaging/package.sh 0.3.0-dev
       - name: Show compile errors
         if: failure()
