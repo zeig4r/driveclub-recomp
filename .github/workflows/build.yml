@@ -29,8 +29,32 @@ jobs:
         shell: msys2 {0}
         run: |
           sed -i 's#/c/msys64#/d/a/_temp/msys64#g' packaging/package.sh msys2-env.sh
-          grep -n msys64 packaging/package.sh msys2-env.sh
-          env SHELLOPTS=xtrace bash packaging/package.sh 0.3.0-dev
+          cat > ffx_win_compat.h <<'EOF'
+          #pragma once
+          #ifdef __cplusplus
+          #include <stdlib.h>
+          #include <stdio.h>
+          #include <string.h>
+          #include <wchar.h>
+          #include <math.h>
+          #include <errno.h>
+          #ifndef _countof
+          #define _countof(a) (sizeof(a) / sizeof((a)[0]))
+          #endif
+          #ifndef swprintf_s
+          #define swprintf_s(buffer, count, ...) _snwprintf((buffer), (count), __VA_ARGS__)
+          #endif
+          #endif
+          EOF
+          sed -i 's|-DCMAKE_CXX_FLAGS="-ffile-prefix-map=$root=\."|-DCMAKE_CXX_FLAGS="-ffile-prefix-map=$root=. -include $root/ffx_win_compat.h"|' build.sh
+          sed -i 's|ninja -C out/gpu DriveClubGame|ninja -k 0 -C out/gpu DriveClubGame|' build.sh
+          grep -n "CXX_FLAGS\|ninja" build.sh
+          bash packaging/package.sh 0.3.0-dev
+      - name: Show compile errors
+        if: failure()
+        shell: msys2 {0}
+        run: |
+          grep -E "error:" out/gpu-build.log | sed 's#^.*driveclub-recomp/driveclub-recomp/##' | sort -u | head -80 || true
       - uses: actions/upload-artifact@v4
         with:
           name: driveclub-recomp-win64
