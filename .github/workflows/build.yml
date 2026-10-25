@@ -28,9 +28,8 @@ jobs:
       - name: Package
         shell: msys2 {0}
         run: |
-          which clang cmake ninja pkg-config cygpath || true
-          cmake --version || true
-          clang --version || true
+          sed -i 's#/c/msys64#/d/a/_temp/msys64#g' packaging/package.sh msys2-env.sh
+          grep -n msys64 packaging/package.sh msys2-env.sh
           env SHELLOPTS=xtrace bash packaging/package.sh 0.3.0-dev
       - uses: actions/upload-artifact@v4
         with:
