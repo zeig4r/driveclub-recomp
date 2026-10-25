@@ -4,11 +4,21 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 350
+    env:
+      CCACHE_DIR: D:\a\ccache
+      CCACHE_MAXSIZE: 3G
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
     steps:
       - name: Keep Unix line endings
         shell: bash
         run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: D:\a\ccache
+          key: ccache-${{ github.run_id }}
+          restore-keys: ccache-
       - uses: msys2/setup-msys2@v2
         with:
           msystem: CLANG64
@@ -24,7 +34,7 @@ jobs:
             mingw-w64-clang-x86_64-protobuf mingw-w64-clang-x86_64-nlohmann-json
             mingw-w64-clang-x86_64-openssl mingw-w64-clang-x86_64-zlib
             mingw-w64-clang-x86_64-miniupnpc mingw-w64-clang-x86_64-python
-            mingw-w64-clang-x86_64-binutils
+            mingw-w64-clang-x86_64-binutils mingw-w64-clang-x86_64-ccache
       - name: Package
         shell: msys2 {0}
         run: |
@@ -56,12 +66,32 @@ jobs:
           #endif
           #endif
           EOF
+          cat > launcher_compat.h <<'EOF'
+          #pragma once
+          #include <cstdlib>
+          #include <cstdio>
+          #include <cstring>
+          #include <cwchar>
+          #include <cstdint>
+          #include <cstddef>
+          #include <cmath>
+          #include <utility>
+          #include <memory>
+          #include <string>
+          #include <algorithm>
+          EOF
           sed -i 's|-DCMAKE_CXX_FLAGS="-ffile-prefix-map=$root=\."|-DCMAKE_CXX_FLAGS="-ffile-prefix-map=$root=. -include $root/ffx_win_compat.h"|' build.sh
           sed -i 's|ninja -C out/gpu DriveClubGame|ninja -k 0 -C out/gpu DriveClubGame|' build.sh
           sed -i 's/-Wall -Wextra -Werror/-Wall -Wextra/' gpu/CMakeLists.txt
+          sed -i 's|clang++ -O2 -std=c++20 -municode|clang++ -O2 -std=c++20 -include launcher_compat.h -municode|' packaging/package.sh
           grep -n "CXX_FLAGS\|ninja" build.sh
-          grep -n "Wextra" gpu/CMakeLists.txt
+          grep -n "launcher_compat" packaging/package.sh | cut -c1-80
           bash packaging/package.sh 0.3.0-dev
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: D:\a\ccache
+          key: ccache-${{ github.run_id }}
       - name: Show compile errors
         if: failure()
         shell: msys2 {0}
