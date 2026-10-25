@@ -3,7 +3,11 @@ on: workflow_dispatch
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 350
     steps:
+      - name: Keep Unix line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - uses: msys2/setup-msys2@v2
         with:
